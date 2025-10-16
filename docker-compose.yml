@@ -1,15 +1,101 @@
 version: "3.9"
 
 services:
-  frontend:
+  web:
     build:
-      context: ./frontend        # Path to your Next.js app
+      context: ./src/frontend
       dockerfile: Dockerfile
     image: dnd/frontend:milestone2
-    container_name: dnd-frontend
+    container_name: dnd-web
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_BASE_URL: "/api"  # or update later to your backend URL
-    ports:
-      - "3000:3000"              # Access at http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: "/api"
+    expose:
+      - "3000"
     restart: unless-stopped
+    depends_on:
+      - api-gateway
+    networks:
+      - dnd-master-network
+
+  api-gateway:
+    build:
+      context: ./src/orchestrator
+      dockerfile: Dockerfile
+    image: dnd/api-gateway:milestone2
+    container_name: dnd-api-gateway
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    expose:
+      - "8000"
+    restart: unless-stopped
+    depends_on:
+      - chromadb
+    networks:
+      - dnd-master-network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: dnd-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/rag/docker-volumes/chromadb:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+      - CHROMA_CORS_ALLOW_ORIGINS=["*"]
+    networks:
+      - dnd-master-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: dnd-nginx
+    depends_on:
+      - web
+      - api-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./src/infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - dnd-master-network
+
+  rag:
+    build:
+      context: ./src/rag
+      dockerfile: Dockerfile
+    image: dnd/rag-cli:milestone2
+    container_name: dnd-rag-cli
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GCP_PROJECT: ${GCP_PROJECT}
+    volumes:
+      - ./src/rag:/app
+      - ./secrets:/secrets
+    depends_on:
+      - chromadb
+    command: ["/bin/bash", "-lc", "sleep infinity"]
+    networks:
+      - dnd-master-network
+
+  finetuning:
+    build:
+      context: ./src/finetuning
+      dockerfile: Dockerfile
+    image: dnd/finetuning:milestone2
+    container_name: dnd-finetuning
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GCP_PROJECT: ${GCP_PROJECT}
+    volumes:
+      - ./src/finetuning:/app
+      - ./secrets:/secrets
+    command: ["/bin/bash", "-lc", "sleep infinity"]
+    networks:
+      - dnd-master-network
+
+networks:
+  dnd-master-network:
+    name: dnd-master-network
