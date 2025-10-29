@@ -1,4 +1,4 @@
-# 🧙‍♂️ DnD Master AI — Milestone 2
+# 🧙‍♂️ DnD Master AI — Milestone 3
 
 ## Overview
 This project is part of **AC215: Applied Deep Learning Systems** at Harvard.  
