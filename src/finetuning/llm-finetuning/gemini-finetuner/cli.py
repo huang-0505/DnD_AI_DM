@@ -7,10 +7,10 @@ from google.genai import types
 
 # Setup
 GCP_PROJECT = os.environ["GCP_PROJECT"]
-TRAIN_DATASET = "gs://cheese-dataset/llm-finetune-dataset-small/train.jsonl"  # Replace with your dataset
-VALIDATION_DATASET = "gs://cheese-dataset/llm-finetune-dataset-small/test.jsonl"  # Replace with your dataset
+TRAIN_DATASET = "gs://dnd-master-dataset/dnd-narrator-finetune-dataset/train.jsonl"
+VALIDATION_DATASET = "gs://dnd-master-dataset/dnd-narrator-finetune-dataset/validation.jsonl"
 GCP_LOCATION = "us-central1"
-GENERATIVE_SOURCE_MODEL = "gemini-2.0-flash-001"
+GENERATIVE_SOURCE_MODEL = "gemini-2.5-flash"
 
 #############################################################################
 #                       Initialize the LLM Client                           #
@@ -28,48 +28,16 @@ generation_config = types.GenerateContentConfig(
 def train(wait_for_job=False):
     print("train()")
 
-    # Supervised Fine Tuning
-    sft_tuning_job = sft.train(
-        source_model=GENERATIVE_SOURCE_MODEL,
-        train_dataset=TRAIN_DATASET,
-        validation_dataset=VALIDATION_DATASET,
-        epochs=1,  # change to 2-3
-        adapter_size=4,
-        learning_rate_multiplier=1.0,
-        tuned_model_display_name="pavlos-cheese-demo-v1",
-    )
-    print("Training job started. Monitoring progress...\n\n")
-
-    # Wait and refresh
-    time.sleep(60)
-    sft_tuning_job.refresh()
-
-    if wait_for_job:
-        print("Check status of tuning job:")
-        print(sft_tuning_job)
-        while not sft_tuning_job.has_ended:
-            time.sleep(60)
-            sft_tuning_job.refresh()
-            print("Job in progress...")
-
-    print(f"Tuned model name: {sft_tuning_job.tuned_model_name}")
-    print(f"Tuned model endpoint name: {sft_tuning_job.tuned_model_endpoint_name}")
-    print(f"Experiment: {sft_tuning_job.experiment}")
-
-
-def train(wait_for_job=False):
-    print("train()")
-
     # Create tuning dataset
     training_dataset = types.TuningDataset(gcs_uri=TRAIN_DATASET)
     validation_dataset = types.TuningDataset(gcs_uri=VALIDATION_DATASET)
 
     # Create tuning job config
     tuning_config = types.CreateTuningJobConfig(
-        epoch_count=1,
+        epoch_count=3,  # 3 epochs for ~$46 total cost (Gemini 2.5 Flash: $5/1M tokens)
         learning_rate_multiplier=1.0,
         adapter_size="ADAPTER_SIZE_FOUR",
-        tuned_model_display_name="pavlos-cheese-demo-v3",
+        tuned_model_display_name="dnd-narrator-gemini25-v1",
         validation_dataset=validation_dataset,
     )
 
@@ -113,20 +81,22 @@ def train(wait_for_job=False):
 
 def chat():
     print("chat()")
-    # Get the model endpoint from Vertex AI: https://console.cloud.google.com/vertex-ai/studio/tuning?project=ac215-project
-    # MODEL_ENDPOINT = "projects/129349313346/locations/us-central1/endpoints/810191635601162240"
-    # MODEL_ENDPOINT = "projects/129349313346/locations/us-central1/endpoints/5584851665544019968"
-    MODEL_ENDPOINT = "projects/129349313346/locations/us-central1/endpoints/5921665062480642048"  # Finetuned model
+    # Fine-tuned D&D Narrator model endpoint (deployed and ready)
+    MODEL_ENDPOINT = "projects/542859696336/locations/us-central1/endpoints/5165249441082376192"
 
-    query = "How is cheese made?"
+    query = "You are a wise old wizard in a tavern. A group of adventurers approaches you seeking information about a nearby dungeon."
     print("query: ", query)
+    print(f"Using endpoint: {MODEL_ENDPOINT}")
+
     response = llm_client.models.generate_content(
         model=MODEL_ENDPOINT,
         contents=query,
         config=generation_config,
     )
     generated_text = response.text
-    print("Fine-tuned LLM Response:", generated_text)
+    print("\n=== Fine-tuned D&D Narrator Response ===")
+    print(generated_text)
+    print("=" * 40)
 
 
 def main(args=None):

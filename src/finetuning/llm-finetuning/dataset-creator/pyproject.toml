@@ -15,4 +15,5 @@ dependencies = [
     "openai-agents>=0.3.2",
     "pandas>=2.3.3",
     "scikit-learn>=1.7.2",
+    "tiktoken>=0.5.1",
 ]

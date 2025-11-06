@@ -7,6 +7,7 @@ import glob
 from sklearn.model_selection import train_test_split
 from google.cloud import storage
 from datasets import load_dataset
+import tiktoken
 
 # Gen AI
 from google import genai
@@ -68,6 +69,24 @@ Guidelines:
    - Keep the story moving forward
 
 This is for fine-tuning purposes based on actual D&D gameplay transcripts."""
+
+def count_tokens(text):
+    """
+    Count tokens in text using tiktoken (GPT-4 tokenizer as approximation for Gemini)
+
+    Args:
+        text: String to count tokens in
+
+    Returns:
+        int: Number of tokens
+    """
+    try:
+        encoding = tiktoken.get_encoding("cl100k_base")  # GPT-4 tokenizer
+        return len(encoding.encode(text))
+    except Exception as e:
+        # Fallback: rough estimate of ~4 characters per token
+        return len(text) // 4
+
 
 def load_crd3():
     """Load CRD3 dataset from Hugging Face"""
@@ -213,6 +232,58 @@ def prepare(max_samples=1000, use_all=False):
         print(f"Final - Train: {len(df_train)}, Validation: {len(df_validation)}")
     print("Total dataset shape:", df_all.shape)
     print(df_all.head())
+
+    # Count tokens for cost estimation
+    print("\n" + "="*60)
+    print("TOKEN COUNT ANALYSIS FOR COST ESTIMATION")
+    print("="*60)
+
+    print("\nCounting tokens (this may take a moment)...")
+
+    # Count tokens in each split
+    train_tokens = df_train["response"].apply(count_tokens).sum()
+    train_context_tokens = df_train["context"].apply(count_tokens).sum()
+    train_total_tokens = train_tokens + train_context_tokens
+
+    validation_tokens = df_validation["response"].apply(count_tokens).sum()
+    validation_context_tokens = df_validation["context"].apply(count_tokens).sum()
+    validation_total_tokens = validation_tokens + validation_context_tokens
+
+    # Use only 256 validation samples for Gemini
+    validation_limited_tokens = df_validation[:256]["response"].apply(count_tokens).sum()
+    validation_limited_context_tokens = df_validation[:256]["context"].apply(count_tokens).sum()
+    validation_limited_total_tokens = validation_limited_tokens + validation_limited_context_tokens
+
+    # Calculate per-sample averages
+    avg_tokens_per_sample = train_total_tokens / len(df_train) if len(df_train) > 0 else 0
+
+    print(f"\n📊 Token Counts:")
+    print(f"  Training set:")
+    print(f"    - Total tokens: {train_total_tokens:,}")
+    print(f"    - Average tokens/sample: {avg_tokens_per_sample:.0f}")
+    print(f"    - Response tokens: {train_tokens:,}")
+    print(f"    - Context tokens: {train_context_tokens:,}")
+
+    print(f"\n  Validation set (full {len(df_validation)} samples):")
+    print(f"    - Total tokens: {validation_total_tokens:,}")
+
+    print(f"\n  Validation set (256 samples used by Gemini):")
+    print(f"    - Total tokens: {validation_limited_total_tokens:,}")
+
+    # Calculate cost estimates
+    tokens_per_epoch = train_total_tokens + validation_limited_total_tokens
+
+    print(f"\n💰 COST ESTIMATION:")
+    print(f"  Tokens per training epoch: {tokens_per_epoch:,}")
+    print(f"  Price: $0.008 per 1,000 tokens")
+    print(f"\n  Estimated costs by number of epochs:")
+    for epochs in [1, 2, 3, 4, 5]:
+        total_tokens = tokens_per_epoch * epochs
+        cost = (total_tokens / 1000) * 0.008
+        print(f"    {epochs} epoch(s):  {total_tokens:,} tokens = ${cost:.2f}")
+
+    print("\n  📌 Recommended: 3-4 epochs for optimal results")
+    print("="*60 + "\n")
 
     # Save the full dataset
     filename = os.path.join(OUTPUT_FOLDER, "dnd-instruct-dataset.csv")
