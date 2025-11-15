@@ -1,0 +1,52 @@
+[
+    {
+        "id": 0,
+        "name": "Knight",
+        "description": "Armored warriors trained in combat and chivalry. Knights excel at close-range fighting, defending allies, and leading charges. Their presence inspires courage and discipline on the battlefield.",
+        "examples": [
+            "a knight defending the village gate",
+            "a knight charging with sword raised",
+            "a knight blocking an orc attack"
+        ]
+    },
+    {
+        "id": 1,
+        "name": "Wizard",
+        "description": "Masters of arcane knowledge, wizards cast spells that manipulate fire, ice, lightning, and other forces. They are fragile in close combat but devastating at range, capable of turning the tide with clever magic.",
+        "examples": [
+            "a wizard casting fireball on approaching goblins",
+            "a wizard using a shield spell to protect allies",
+            "a wizard conjuring a magical barrier"
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Ranger",
+        "description": "Skilled hunters and trackers, rangers excel at ranged attacks and navigating the wilds. They often use bows, crossbows, or thrown weapons, striking enemies before they even get close.",
+        "examples": [
+            "a ranger shooting arrows from a tree",
+            "a ranger tracking orc footprints in the forest",
+            "a ranger throwing a dagger at a goblin"
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Cleric",
+        "description": "Divine spellcasters who heal and protect their allies. Clerics channel the power of gods or spirits to mend wounds, remove curses, and bolster the morale of companions.",
+        "examples": [
+            "a cleric casting a healing spell on the knight",
+            "a cleric raising a protective shield over the party",
+            "a cleric banishing undead skeletons"
+        ]
+    },
+    {
+        "id": 4,
+        "name": "Barbarian",
+        "description": "Fierce warriors who rely on raw strength, rage, and endurance. Barbarians excel in close combat, dealing heavy damage with their weapons and shrugging off attacks that would fell others.",
+        "examples": [
+            "a barbarian charging into a horde of goblins",
+            "a barbarian swinging a massive axe with fury",
+            "a barbarian taking blows without faltering"
+        ]
+    }
+]

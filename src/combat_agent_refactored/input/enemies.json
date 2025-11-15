@@ -1,0 +1,52 @@
+[
+    {
+        "id": 0,
+        "name": "Goblin",
+        "description": "Small, green-skinned humanoids known for their cunning and cruelty. Goblins travel in packs, ambushing travelers and using sheer numbers to overwhelm their foes. They rely on speed and trickery rather than strength.",
+        "examples": [
+            "a sneaky goblin hiding behind rocks",
+            "a group of goblins attacking the caravan",
+            "a goblin thief trying to steal your gold"
+        ]
+    },
+    {
+        "id": 1,
+        "name": "Orc",
+        "description": "Brutal warriors driven by rage and tribal pride. Orcs fight with savage strength, wielding crude axes or clubs. Their war cries echo across the battlefield as they charge without fear.",
+        "examples": [
+            "an orc swinging a massive axe",
+            "orc raiders charging from the hills",
+            "a lone orc challenging you to a duel"
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Skeleton",
+        "description": "Undead warriors animated by dark necromancy. Their bones rattle as they march forward with eerie silence, armed with rusted weapons but endless endurance. They feel no pain or fear.",
+        "examples": [
+            "a skeleton soldier raising its sword",
+            "skeletons emerging from ancient graves",
+            "a skeleton archer aiming from the shadows"
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Troll",
+        "description": "Towering, regenerating monsters that heal rapidly from most wounds. Trolls are slow-witted but relentless, smashing enemies with sheer brute force. Fire and acid are their only true weaknesses.",
+        "examples": [
+            "a giant troll smashing the bridge",
+            "a wounded troll regenerating before your eyes",
+            "troll roaring as it swings its club"
+        ]
+    },
+    {
+        "id": 4,
+        "name": "Dragon",
+        "description": "Ancient, majestic, and terrifying. Dragons are apex predators with immense strength and intellect. They command elemental breath — fire, ice, lightning, or poison — and hoard treasures beyond imagination.",
+        "examples": [
+            "a red dragon breathing fire over the village",
+            "a dragon guarding its golden hoard",
+            "a wounded dragon thrashing in fury"
+        ]
+    }
+]
