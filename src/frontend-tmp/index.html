@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>DnD Combat Arena</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+</head>
+
+<body>
+    <!-- Background overlay -->
+    <div class="bg-overlay"></div>
+
+    <!-- Main container -->
+    <div class="combat-arena">
+        <!-- Header -->
+        <header class="arena-header">
+            <h1 class="title">⚔️ Combat Arena ⚔️</h1>
+            <div class="header-info">
+                <span class="round-counter">Round: <span id="roundNumber">1</span></span>
+                <button class="btn btn-danger" id="endCombatBtn" style="display: none;">End Combat</button>
+            </div>
+        </header>
+
+        <!-- Combat grid -->
+        <div class="combat-grid">
+            <!-- Left panel: Players -->
+            <div class="characters-panel players-panel">
+                <h2 class="panel-title">⚔️ Heroes</h2>
+                <div id="playersContainer" class="characters-container">
+                    <!-- Player cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Center panel: Dialogue/Narrative -->
+            <div class="dialogue-panel">
+                <div class="dialogue-scroll" id="dialogueScroll">
+                    <div class="welcome-message">
+                        <h2>Welcome to the Combat Arena!</h2>
+                        <p>Prepare yourself for an epic battle...</p>
+                        <button class="btn btn-primary" id="startCombatBtn">Start Combat</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right panel: Enemies -->
+            <div class="characters-panel enemies-panel">
+                <h2 class="panel-title">💀 Foes</h2>
+                <div id="enemiesContainer" class="characters-container">
+                    <!-- Enemy cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom input panel -->
+        <div class="action-panel" id="actionPanel" style="display: none;">
+            <div class="current-turn" id="currentTurn">
+                Waiting for combat to start...
+            </div>
+            <div class="action-input-container">
+                <input
+                    type="text"
+                    id="actionInput"
+                    class="action-input"
+                    placeholder="Describe your action... (e.g., 'I swing my sword at the goblin')"
+                    disabled
+                />
+                <button class="btn btn-action" id="submitActionBtn" disabled>
+                    ⚔️ Take Action
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
