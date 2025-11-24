@@ -39,7 +39,8 @@ WORKDIR /app
 COPY --chown=app:app pyproject.toml uv.lock* ./
 
 # Install dependencies in a separate layer for better caching
-RUN uv sync --frozen
+# Use --frozen only if uv.lock exists, otherwise let uv generate it
+RUN if [ -f uv.lock ]; then uv sync --frozen; else uv sync; fi
 
 # Copy the rest of the source code
 COPY --chown=app:app . ./

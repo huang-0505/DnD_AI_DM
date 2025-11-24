@@ -6,12 +6,17 @@ Uses Google GenAI for LLM-based decision making and narration.
 
 import os
 import random
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from typing import Optional
 from google import genai
 from google.genai import types
 
 from api.utils.combat_engine import Character, CombatEngine, ACTION_REGISTRY
 from api.utils.db_tool import retrieve_top_k
+
+# Thread pool for running blocking GenAI calls
+_genai_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="genai")
 
 
 # ========== Action Parser for Players ==========
@@ -132,67 +137,106 @@ class DnDBot:
     def __init__(self, engine: CombatEngine, model: str = "gemini-2.0-flash-001"):
         self.engine = engine
         self.model = model
-        # Initialize Google GenAI client using GCP credentials
+        # Initialize Google GenAI client using GCP credentials (if available)
         gcp_project = os.environ.get("GCP_PROJECT")
         gcp_location = os.environ.get("GCP_LOCATION", "us-central1")
-        self.client = genai.Client(
-            vertexai=True,
-            project=gcp_project,
-            location=gcp_location
-        )
+        self.client = None
+        self.use_llm = False
+        try:
+            if gcp_project:
+                self.client = genai.Client(
+                    vertexai=True,
+                    project=gcp_project,
+                    location=gcp_location
+                )
+                self.use_llm = True
+            else:
+                print("GCP_PROJECT not set, enemy bot will use simple attack strategy")
+        except Exception as e:
+            print(f"Failed to initialize GenAI client: {e}, using fallback strategy")
         self.parser = ActionParserBot(engine)
 
-    def decide_action(self) -> Optional[dict]:
-        """
-        Generate enemy action using LLM tactical reasoning.
-
-        Returns:
-            Action data dict or None if decision fails
-        """
-        actor = self.engine.current_actor
-
-        # Construct tactical analysis prompt
-        analysis_prompt = f"""
-You are a DnD enemy bot controlling {actor.name}.
-
-Current State:
-- You are: {actor}
-- Your allies: {self.engine.state.enemies}
-- Your enemies: {self.engine.state.players}
-
-Choose one hostile action and describe it in natural language.
-Describe who you attack (or target) and how you perform it.
-Stay consistent with D&D combat style and the character's role.
-Keep your response concise (1-2 sentences).
-"""
-
+    def _call_genai_sync(self, prompt: str) -> Optional[str]:
+        """Synchronous GenAI call (runs in thread pool)"""
         try:
-            # Call Google GenAI
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=analysis_prompt,
+                contents=prompt,
                 config=types.GenerateContentConfig(
                     max_output_tokens=150,
                     temperature=0.7,
                 )
             )
-
-            action_text = response.text
-
-            # Parse LLM output into structured action
-            action = self.parser.parse(actor, action_text)
-            return action
+            return response.text if response and response.text else None
         except Exception as e:
-            print(f"Error in AI decision: {e}")
-            # Fallback to random attack
-            alive_players = self.engine.state.get_alive(role="player")
-            if alive_players:
-                return {
-                    "id": 0,
-                    "type": "MeleeAttack",
-                    "target": random.choice(alive_players)
-                }
+            print(f"GenAI call error: {e}")
             return None
+
+    async def decide_action(self) -> Optional[dict]:
+        """
+        Generate enemy action using LLM tactical reasoning.
+        Falls back to simple attack if LLM fails or times out.
+        Uses async with timeout to prevent freezing.
+
+        Returns:
+            Action data dict or None if decision fails
+        """
+        actor = self.engine.current_actor
+        if not actor:
+            return None
+
+        alive_players = self.engine.state.get_alive(role="player")
+        if not alive_players:
+            return None
+        
+        # Default fallback target
+        target = random.choice(alive_players)
+        
+        # Try to use LLM for more interesting actions (only if client is available)
+        if self.use_llm and self.client:
+            try:
+                # Construct tactical analysis prompt
+                analysis_prompt = f"""
+You are a DnD enemy bot controlling {actor.name}.
+
+Current State:
+- You are: {actor.name} (HP: {actor.hp}/{actor.max_hp}, AC: {actor.ac})
+- Your allies: {[e.name for e in self.engine.state.enemies if e.alive]}
+- Your enemies: {[p.name for p in self.engine.state.players if p.alive]}
+
+Choose one hostile action and describe it in natural language.
+Describe who you attack (or target) and how you perform it.
+Stay consistent with D&D combat style and the character's role.
+Keep your response concise (1-2 sentences).
+Example: "I attack {target.name} with my weapon"
+"""
+
+                # Run GenAI call in thread pool with 5 second timeout
+                loop = asyncio.get_event_loop()
+                try:
+                    action_text = await asyncio.wait_for(
+                        loop.run_in_executor(_genai_executor, self._call_genai_sync, analysis_prompt),
+                        timeout=5.0
+                    )
+                    
+                    if action_text:
+                        # Parse LLM output into structured action
+                        action = self.parser.parse(actor, action_text)
+                        if action:
+                            return action
+                except asyncio.TimeoutError:
+                    print(f"GenAI call timed out after 5 seconds, using fallback")
+                except Exception as e:
+                    print(f"Error in async AI decision: {e}")
+            except Exception as e:
+                print(f"Error setting up AI decision (using fallback): {e}")
+        
+        # Fallback to simple attack (always works, never hangs)
+        return {
+            "id": 0,
+            "type": "MeleeAttack",
+            "target": target
+        }
 
 
 class DnDNarrator:

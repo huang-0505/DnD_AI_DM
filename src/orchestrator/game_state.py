@@ -91,6 +91,12 @@ class GameStateTree:
         self.nodes: Dict[str, GameStateNode] = {}
         self.root_id: Optional[str] = None
         self.current_node_id: Optional[str] = None
+        
+        # Round and combat tracking
+        self.narration_round: int = 0  # Count of narration actions (not combat rounds)
+        self.combat_count: int = 0  # Number of combats completed
+        self.max_combats: int = 5  # Game ends after this many combats (configurable)
+        self.combat_rounds: List[int] = [3, 5, 10,15]  # Rounds where combat is forced (configurable)
 
     def create_root(self, state_type: GameStateType = GameStateType.NARRATION) -> GameStateNode:
         """Initialize the game with a root narration node"""
@@ -154,10 +160,30 @@ class GameStateTree:
             node = self.nodes.get(node.parent_id) if node.parent_id else None
         return path
 
+    def increment_narration_round(self):
+        """Increment narration round counter"""
+        self.narration_round += 1
+    
+    def increment_combat_count(self):
+        """Increment combat counter"""
+        self.combat_count += 1
+    
+    def should_trigger_combat(self) -> bool:
+        """Check if combat should be triggered based on round"""
+        return self.narration_round in self.combat_rounds
+    
+    def should_end_game(self) -> bool:
+        """Check if game should end based on combat count"""
+        return self.combat_count >= self.max_combats
+    
     def to_dict(self) -> Dict:
         """Convert entire tree to dictionary"""
         return {
             "nodes": {node_id: node.to_dict() for node_id, node in self.nodes.items()},
             "root_id": self.root_id,
-            "current_node_id": self.current_node_id
+            "current_node_id": self.current_node_id,
+            "narration_round": self.narration_round,
+            "combat_count": self.combat_count,
+            "max_combats": self.max_combats,
+            "combat_rounds": self.combat_rounds
         }

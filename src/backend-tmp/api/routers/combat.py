@@ -190,14 +190,23 @@ async def player_action(session_id: str, request: PlayerActionRequest) -> Action
     narrator = narrators[session_id]
 
     if engine.is_battle_over():
-        raise HTTPException(status_code=400, detail="Battle is already over")
+        state = get_combat_state(session_id, engine)
+        return ActionResponse(
+            narrative="The battle has ended!",
+            raw_result="Battle over",
+            state=state
+        )
 
-    # Advance to next turn
-    actor = engine.next_turn()
-
-    # Skip dead actors
-    while not actor.alive and not engine.is_battle_over():
+    # Get current actor (or advance if none set)
+    if not engine.current_actor:
+        # No current actor - advance to first turn
         actor = engine.next_turn()
+        # Skip dead actors
+        while not actor.alive and not engine.is_battle_over():
+            actor = engine.next_turn()
+    else:
+        # Use current actor (don't advance yet - we'll advance after processing)
+        actor = engine.current_actor
 
     if engine.is_battle_over():
         state = get_combat_state(session_id, engine)
@@ -207,8 +216,14 @@ async def player_action(session_id: str, request: PlayerActionRequest) -> Action
             state=state
         )
 
-    # Handle player or enemy action
+    # Validate turn ownership
     if actor.role == "player":
+        # It's a player turn - validate action was provided and not "enemy_turn"
+        if request.action == "enemy_turn":
+            raise HTTPException(status_code=400, detail="Cannot process enemy turn during player turn")
+        if not request.action or request.action.strip() == "":
+            raise HTTPException(status_code=400, detail="Action required for player turn")
+        
         # Parse player action
         action = parser.parse(actor, request.action)
         if not action:
@@ -221,8 +236,9 @@ async def player_action(session_id: str, request: PlayerActionRequest) -> Action
         narrative = narrator.narrate(request.action, raw_result)
 
     else:
-        # Enemy AI decides action
-        action = bot.decide_action()
+        # It's an enemy turn - process enemy action (ignore player-provided action text)
+        # Use await since decide_action is now async
+        action = await bot.decide_action()
         if not action:
             raise HTTPException(status_code=500, detail="AI failed to decide action")
 
@@ -231,6 +247,13 @@ async def player_action(session_id: str, request: PlayerActionRequest) -> Action
 
         # Generate narrative
         narrative = narrator.narrate(raw_result, raw_result)
+
+    # Advance to next turn after processing action
+    engine.next_turn()
+    
+    # Skip dead actors in next turn
+    while engine.current_actor and not engine.current_actor.alive and not engine.is_battle_over():
+        engine.next_turn()
 
     # Get updated state
     state = get_combat_state(session_id, engine)

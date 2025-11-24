@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   web:
     build:
@@ -53,6 +51,7 @@ services:
       GCP_PROJECT: ${GCP_PROJECT}
       GCP_LOCATION: us-central1
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/ml-workflow.json
+      DEV: "0"
     volumes:
       - ./secrets:/secrets:ro
     expose:
@@ -60,6 +59,7 @@ services:
     restart: unless-stopped
     networks:
       - dnd-master-network
+
 
   # Orchestrator (main game controller with rule validation)
   api-gateway:

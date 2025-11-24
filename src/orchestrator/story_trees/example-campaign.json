@@ -1,0 +1,113 @@
+{
+  "campaign_id": "example-campaign",
+  "root_node_id": "start_1",
+  "nodes": [
+    {
+      "node_id": "start_1",
+      "narrative": "You stand at the entrance of an ancient dungeon. Two paths lie before you, each shrouded in mystery. Torches flicker in the darkness, casting dancing shadows on the stone walls.",
+      "choices": [
+        "Take the left path",
+        "Take the right path",
+        "Investigate the entrance more carefully"
+      ],
+      "is_ending": false,
+      "combat_available": false,
+      "children": {
+        "Take the left path": "left_path_1",
+        "Take the right path": "right_path_1",
+        "Investigate the entrance more carefully": "entrance_1"
+      },
+      "metadata": {
+        "location": "Dungeon Entrance",
+        "encounter_type": "decision",
+        "max_depth": 3
+      }
+    },
+    {
+      "node_id": "left_path_1",
+      "narrative": "You follow the left path deeper into the dungeon. The air grows warmer, and you hear the sound of something large breathing. Rounding a corner, you discover a massive treasure chamber - but it's guarded by an ancient red dragon, its scales glinting in the torchlight!",
+      "choices": [
+        "Fight the dragon",
+        "Try to sneak past the dragon",
+        "Retreat back to the entrance"
+      ],
+      "is_ending": false,
+      "combat_available": true,
+      "children": {
+        "Fight the dragon": "ending_victory",
+        "Try to sneak past the dragon": "ending_neutral",
+        "Retreat back to the entrance": "start_1"
+      },
+      "metadata": {
+        "location": "Dragon's Lair",
+        "encounter_type": "combat",
+        "difficulty": "hard"
+      }
+    },
+    {
+      "node_id": "right_path_1",
+      "narrative": "The right path leads you to a circular chamber with ancient runes carved into the walls. In the center, a pedestal holds a glowing crystal. As you approach, the runes begin to pulse with light, and a voice echoes: 'Answer my riddle, and the path forward shall be revealed.'",
+      "choices": [
+        "Attempt to solve the riddle",
+        "Turn back to the entrance",
+        "Search for hidden passages in the walls"
+      ],
+      "is_ending": false,
+      "combat_available": false,
+      "children": {
+        "Attempt to solve the riddle": "ending_victory",
+        "Turn back to the entrance": "start_1",
+        "Search for hidden passages in the walls": "ending_neutral"
+      },
+      "metadata": {
+        "location": "Riddle Chamber",
+        "encounter_type": "puzzle",
+        "difficulty": "medium"
+      }
+    },
+    {
+      "node_id": "entrance_1",
+      "narrative": "You carefully examine the entrance, running your hands along the stone. Your fingers find a loose brick, and when you press it, a section of the wall slides away with a grinding sound, revealing a narrow secret passage that wasn't visible before!",
+      "choices": [
+        "Enter the secret passage",
+        "Continue exploring the main paths instead"
+      ],
+      "is_ending": false,
+      "combat_available": false,
+      "children": {
+        "Enter the secret passage": "ending_victory",
+        "Continue exploring the main paths instead": "start_1"
+      },
+      "metadata": {
+        "location": "Secret Passage",
+        "encounter_type": "discovery",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "node_id": "ending_victory",
+      "narrative": "🎉 **VICTORY!** 🎉\n\nThrough courage, wit, or luck, you have successfully completed the adventure! The legendary treasure is yours, and tales of your heroism will be told for generations to come. The dungeon's mysteries have been solved, and you emerge victorious!\n\n*The adventure ends here. Thank you for playing!*",
+      "choices": [],
+      "is_ending": true,
+      "ending_type": "victory",
+      "metadata": {
+        "location": "Treasure Vault",
+        "ending_type": "victory",
+        "final": true
+      }
+    },
+    {
+      "node_id": "ending_neutral",
+      "narrative": "You make your way out of the dungeon, having explored its depths but leaving the greatest treasures behind. While you didn't claim the legendary prize, you've gained valuable experience and lived to tell the tale. Perhaps another adventure awaits...\n\n*The adventure ends here. Thank you for playing!*",
+      "choices": [],
+      "is_ending": true,
+      "ending_type": "neutral",
+      "metadata": {
+        "location": "Dungeon Exit",
+        "ending_type": "neutral",
+        "final": true
+      }
+    }
+  ]
+}
+
