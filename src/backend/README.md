@@ -90,7 +90,7 @@ The API will be available at `http://localhost:9000`
 ## Project Structure
 
 ```
-backend-tmp/
+backend/
 ├── api/
 │   ├── service.py              # FastAPI application
 │   ├── routers/

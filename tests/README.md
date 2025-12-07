@@ -84,7 +84,7 @@ If you prefer to run tests without Docker:
 pip install -r tests/requirements.txt
 
 # Set PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/backend-tmp:$(pwd)/src/rule_agent:$(pwd)/src/orchestrator"
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/backend:$(pwd)/src/rule_agent:$(pwd)/src/orchestrator"
 
 # Run tests
 pytest tests/ -v
@@ -123,7 +123,7 @@ docker-compose -f docker-compose.test.yml run --rm \
     -v $(pwd)/htmlcov:/app/htmlcov \
     test-runner \
     pytest tests/unit tests/integration \
-        --cov=src/backend-tmp/api \
+        --cov=src/backend/api \
         --cov=src/rule_agent \
         --cov=src/orchestrator \
         --cov-report=html
@@ -239,8 +239,8 @@ def test_with_fixture(sample_player):
 If you get `ModuleNotFoundError`:
 
 ```bash
-# Add src/backend-tmp to PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/backend-tmp"
+# Add src/backend to PYTHONPATH
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/backend"
 pytest
 ```
 

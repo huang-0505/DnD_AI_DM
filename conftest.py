@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 # Add source directories to Python path
 project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root / "src" / "backend-tmp"))
+sys.path.insert(0, str(project_root / "src" / "backend"))
 sys.path.insert(0, str(project_root / "src" / "orchestrator"))
 sys.path.insert(0, str(project_root / "src" / "rule_agent"))
 

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star, BookOpen, Users, Shield, Sparkles, Play, Check } from "lucide-react"
+import { Star, BookOpen, Users, Shield, Sparkles, Play } from "lucide-react"
 import Link from "next/link"
 
 export default function LandingPage() {
@@ -11,40 +11,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center magical-glow">
               <div className="w-4 h-4 bg-accent rounded-sm transform rotate-45"></div>
             </div>
             <span className="font-serif text-xl font-bold text-glow">Arcane Engine</span>
-          </div>
-
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link href="#features" className="text-sm font-medium hover:text-accent transition-colors">
-              Features
-            </Link>
-            <Link href="#pricing" className="text-sm font-medium hover:text-accent transition-colors">
-              Pricing
-            </Link>
-            <Link href="#community" className="text-sm font-medium hover:text-accent transition-colors">
-              Community
-            </Link>
-            <Link href="#blog" className="text-sm font-medium hover:text-accent transition-colors">
-              Blog
-            </Link>
-          </nav>
-
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-accent text-foreground hover:bg-accent hover:text-accent-foreground bg-transparent"
-            >
-              Sign In
-            </Button>
-            <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 gold-glow">
-              Start Free Adventure
-            </Button>
           </div>
         </div>
       </header>
@@ -272,89 +244,6 @@ export default function LandingPage() {
                   "Even as an experienced DM, I love using Arcane Engine for solo play. It's given me incredible
                   inspiration for my own campaigns."
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-24">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">Choose Your Destiny</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="border-border">
-              <CardContent className="p-6">
-                <h3 className="font-serif text-xl font-semibold mb-2">Free Trial</h3>
-                <p className="text-3xl font-bold mb-4">$0</p>
-                <p className="text-muted-foreground mb-6">Limited to one introductory adventure</p>
-                <Button variant="outline" className="w-full bg-transparent">
-                  Get Started
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-accent relative magical-glow">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-accent text-accent-foreground">Most Popular</Badge>
-              </div>
-              <CardContent className="p-6">
-                <h3 className="font-serif text-xl font-semibold mb-2">Adventurer</h3>
-                <p className="text-3xl font-bold mb-1">
-                  $19<span className="text-lg font-normal">/month</span>
-                </p>
-                <p className="text-muted-foreground mb-6">Unlimited adventures, core rulebooks, community features</p>
-                <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Choose Plan</Button>
-                <div className="mt-6 space-y-2">
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    Unlimited adventures
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    Core D&D 5e rulebooks
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    Community features
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border">
-              <CardContent className="p-6">
-                <h3 className="font-serif text-xl font-semibold mb-2">Loremaster</h3>
-                <p className="text-3xl font-bold mb-1">
-                  $39<span className="text-lg font-normal">/month</span>
-                </p>
-                <p className="text-muted-foreground mb-6">
-                  All features plus expansion content and world creation tools
-                </p>
-                <Button variant="outline" className="w-full bg-transparent">
-                  Choose Plan
-                </Button>
-                <div className="mt-6 space-y-2">
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    Everything in Adventurer
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    All expansion content
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    Advanced AI model
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Check className="w-4 h-4 text-accent mr-2" />
-                    World creation tools
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>

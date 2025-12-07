@@ -53,19 +53,32 @@ class ActionParser:
         if not alive_enemies:
             return None
 
-        try:
-            enemy_ids = retrieve_top_k(user_input, self.enemy_db_path, k=100)
-            # Match retrieved IDs with alive enemies
-            target = None
-            for enemy_id in enemy_ids:
-                if any(e.id == enemy_id for e in alive_enemies):
-                    target = self.engine.state.get_by_id(enemy_id, role="enemy")
-                    break
+        # Use name matching from user input instead of unreliable ID matching
+        target = None
+        user_input_lower = user_input.lower()
 
-            if not target:
-                target = alive_enemies[0]  # Default to first alive enemy
-        except:
-            # Fallback to first alive enemy if database not available
+        # Try to find enemy by name mentioned in the action
+        for enemy in alive_enemies:
+            if enemy.name.lower() in user_input_lower:
+                target = enemy
+                break
+
+        # If no name match, try semantic search but match by name not ID
+        if not target:
+            try:
+                enemy_ids = retrieve_top_k(user_input, self.enemy_db_path, k=100)
+                # Try to match enemy names from the database
+                for enemy_id in enemy_ids:
+                    # Get enemy from combat state by ID to get its name
+                    db_enemy = self.engine.state.get_by_id(enemy_id, role="enemy")
+                    if db_enemy and db_enemy in alive_enemies:
+                        target = db_enemy
+                        break
+            except:
+                pass
+
+        # Final fallback: default to first alive enemy
+        if not target:
             target = alive_enemies[0]
 
         return {
@@ -121,22 +134,17 @@ class ActionParserBot:
         try:
             ally_ids = retrieve_top_k(action_text, self.ally_db_path, k=100)
             target = None
-            # Match retrieved IDs with valid targets
+            # CRITICAL FIX: Match retrieved IDs ONLY against valid_targets to prevent cross-targeting
+            # The database contains ALL characters, but we must only select from valid_targets
             for ally_id in ally_ids:
-                # Check players first
-                if target_role == "player":
-                    if any(p.id == ally_id for p in self.engine.state.get_alive(role="player")):
-                        target = self.engine.state.get_by_id(ally_id, role="player")
+                # Search directly in valid_targets list (already filtered by role)
+                for candidate in valid_targets:
+                    if candidate.id == ally_id:
+                        target = candidate
+                        print(f"[ActionParserBot] Found target via semantic search: {target.name} (role: {target.role})")
                         break
-                    # Also check teammates
-                    if any(t.id == ally_id for t in self.engine.state.get_alive(role="teammate")):
-                        target = self.engine.state.get_by_id(ally_id, role="teammate")
-                        break
-                else:
-                    # For enemies, check enemy list
-                    if any(e.id == ally_id for e in self.engine.state.get_alive(role="enemy")):
-                        target = self.engine.state.get_by_id(ally_id, role="enemy")
-                        break
+                if target:
+                    break
 
             # Fallback: try name matching if semantic search didn't work
             if not target:
@@ -144,6 +152,7 @@ class ActionParserBot:
                 for t in valid_targets:
                     if t.name.lower() in action_lower:
                         target = t
+                        print(f"[ActionParserBot] Found target via name matching: {target.name} (role: {target.role})")
                         break
 
             # Final fallback: use tactical or random target selection instead of always first
@@ -237,19 +246,38 @@ class DnDBot:
         """
         Select a tactical target using smart heuristics.
         Prioritizes: low HP (finish off wounded), lower AC (easier to hit), with some randomness.
-        
+
         Args:
             targets: List of potential target characters
             actor: The acting character
-            
+
         Returns:
             Selected target character or None if no targets
         """
         if not targets:
             return None
-        
-        if len(targets) == 1:
-            return targets[0]
+
+        # Filter out self from targets (prevent self-targeting)
+        valid_targets = [t for t in targets if t != actor and t.id != actor.id]
+
+        # CRITICAL: Ensure enemies only target players/teammates, not other enemies
+        if actor.role == "enemy":
+            valid_targets = [t for t in valid_targets if t.role in ["player", "teammate"]]
+            print(f"[DnDBot] Enemy {actor.name} filtered targets to players/teammates only: {[t.name for t in valid_targets]}")
+        # Similarly for teammates - only target enemies
+        elif actor.role == "teammate":
+            valid_targets = [t for t in valid_targets if t.role == "enemy"]
+            print(f"[DnDBot] Teammate {actor.name} filtered targets to enemies only: {[t.name for t in valid_targets]}")
+
+        if not valid_targets:
+            print(f"[DnDBot] WARNING: No valid targets after filtering for {actor.name} (role: {actor.role})")
+            return None
+
+        if len(valid_targets) == 1:
+            return valid_targets[0]
+
+        # Update to use valid_targets instead of targets
+        targets = valid_targets
         
         # Score each target based on tactical factors
         scored_targets = []

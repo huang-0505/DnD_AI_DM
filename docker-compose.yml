@@ -40,10 +40,10 @@ services:
     networks:
       - dnd-master-network
 
-  # Combat Agent (backend-tmp)
+  # Combat Agent (backend)
   combat-agent:
     build:
-      context: ./src/backend-tmp
+      context: ./src/backend
       dockerfile: Dockerfile
     image: dnd/combat-agent:milestone4
     container_name: dnd-combat-agent

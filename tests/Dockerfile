@@ -59,7 +59,7 @@ COPY --chown=app:app ./conftest.py /app/
 COPY --chown=app:app ./pytest.ini /app/
 
 # Set Python path to include all service directories
-ENV PYTHONPATH=/app/src/backend-tmp:/app/src/rule_agent:/app/src/orchestrator
+ENV PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator
 
 # Add virtual environment to PATH so pytest and other tools are available
 ENV PATH="/home/app/.venv/bin:$PATH"

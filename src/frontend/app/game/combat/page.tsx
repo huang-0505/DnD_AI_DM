@@ -2,10 +2,9 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import Link from "next/link"
 
 interface Character {
   name: string
@@ -27,7 +26,6 @@ interface CombatState {
 }
 
 export default function CombatPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [combatSessionId, setCombatSessionId] = useState<string | null>(null)
   const [combatState, setCombatState] = useState<CombatState | null>(null)
@@ -195,28 +193,30 @@ export default function CombatPage() {
     } else if (isEnemy) {
       // Enemy turn - auto-trigger
       setIsPlayerTurn(false)
-      // Only trigger auto turn if not already in progress and not loading
-      // Add a small delay to ensure previous turn processing is complete
-      if (!enemyTurnInProgress.current && !isLoading) {
-        console.log("[Frontend] Detected enemy turn, will trigger in 1.5s:", currentActor)
+      // Only trigger auto turn if not already in progress
+      // Remove isLoading check to allow enemy turns during initialization
+      if (!enemyTurnInProgress.current) {
+        // Use longer delay (3s) for first enemy turn to ensure backend is ready
+        // Check if this is the very first turn (Round 1, no narratives yet)
+        const isFirstTurn = !narratives || narratives.length <= 1
+        const delay = isFirstTurn ? 3000 : 1500
+        console.log(`[Frontend] Detected enemy turn, will trigger in ${delay}ms (first turn: ${isFirstTurn}):`, currentActor)
         setTimeout(() => {
-          // Double-check conditions before triggering
-          if (!enemyTurnInProgress.current && !isLoading && combatSessionId && !gameOver) {
+          // Double-check conditions before triggering (removed isLoading check)
+          if (!enemyTurnInProgress.current && combatSessionId && !gameOver) {
             console.log("[Frontend] Timeout fired, calling triggerEnemyTurn()")
             triggerEnemyTurn()
           } else {
             console.log("[Frontend] Conditions changed, skipping auto turn trigger:", {
               enemyTurnInProgress: enemyTurnInProgress.current,
-              isLoading,
               combatSessionId: !!combatSessionId,
               gameOver
             })
           }
-        }, 1500)
+        }, delay)
       } else {
-        console.log("[Frontend] Enemy turn already in progress or loading, skipping trigger:", {
-          enemyTurnInProgress: enemyTurnInProgress.current,
-          isLoading
+        console.log("[Frontend] Enemy turn already in progress, skipping trigger:", {
+          enemyTurnInProgress: enemyTurnInProgress.current
         })
       }
     }
@@ -373,19 +373,32 @@ export default function CombatPage() {
           setNarratives(prev => [...prev, "❌ Failed to recover. Please refresh the page."])
         }
       } else {
-        setNarratives(prev => [...prev, `⚠️ Error: ${error.message || "Failed to process enemy turn"}`])
-        // Try to recover by fetching state
-        try {
-          const stateResponse = await fetch(`/api/combat/state/${combatSessionId}`)
-          if (stateResponse.ok) {
-            const stateData = await stateResponse.json()
-            setCombatState(stateData)
-            setTimeout(() => {
-              checkTurn(stateData)
-            }, 100)
+        // Check if this was the first enemy turn (combat just started)
+        const isFirstTurn = !narratives || narratives.length <= 1
+
+        if (isFirstTurn) {
+          console.log("[Frontend] First enemy turn failed, will retry in 2 seconds...")
+          setNarratives(prev => [...prev, "⚠️ Enemy is preparing... retrying..."])
+          // Retry after 2 seconds for first turn only
+          setTimeout(() => {
+            console.log("[Frontend] Retrying first enemy turn...")
+            triggerEnemyTurn()
+          }, 2000)
+        } else {
+          setNarratives(prev => [...prev, `⚠️ Error: ${error.message || "Failed to process enemy turn"}`])
+          // Try to recover by fetching state
+          try {
+            const stateResponse = await fetch(`/api/combat/state/${combatSessionId}`)
+            if (stateResponse.ok) {
+              const stateData = await stateResponse.json()
+              setCombatState(stateData)
+              setTimeout(() => {
+                checkTurn(stateData)
+              }, 100)
+            }
+          } catch (e) {
+            console.error("[Frontend] Failed to recover after error:", e)
           }
-        } catch (e) {
-          console.error("[Frontend] Failed to recover after error:", e)
         }
       }
     }
@@ -558,7 +571,11 @@ export default function CombatPage() {
   // Scroll to bottom when narratives update
   useEffect(() => {
     if (dialogueScrollRef.current) {
-      dialogueScrollRef.current.scrollTop = dialogueScrollRef.current.scrollHeight
+      // Use smooth scrolling for better UX
+      dialogueScrollRef.current.scrollTo({
+        top: dialogueScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
     }
   }, [narratives])
 
@@ -588,15 +605,8 @@ export default function CombatPage() {
           <h1 className="text-4xl font-bold text-yellow-500 drop-shadow-lg" style={{ fontFamily: "'MedievalSharp', cursive" }}>
             ⚔️ Combat Arena ⚔️
           </h1>
-          <div className="flex gap-5 items-center">
-            <div className="text-xl font-bold text-amber-50">
-              Round: <span className="text-yellow-400">{combatState?.round || 1}</span>
-            </div>
-            <Link href="/game">
-              <Button variant="destructive" className="font-mono">
-                Exit Combat
-              </Button>
-            </Link>
+          <div className="text-xl font-bold text-amber-50">
+            Round: <span className="text-yellow-400">{combatState?.round || 1}</span>
           </div>
         </header>
 
@@ -615,11 +625,11 @@ export default function CombatPage() {
           </div>
 
           {/* Center: Dialogue */}
-          <div className="bg-amber-50 border-4 border-gray-900 rounded-lg p-4 shadow-lg overflow-y-auto max-h-[600px]">
-            <div
-              ref={dialogueScrollRef}
-              className="space-y-3 min-h-full"
-            >
+          <div
+            ref={dialogueScrollRef}
+            className="bg-amber-50 border-4 border-gray-900 rounded-lg p-4 shadow-lg overflow-y-auto max-h-[600px]"
+          >
+            <div className="space-y-3 min-h-full">
               {narratives.length === 0 ? (
                 <div className="text-center py-10">
                   <h2 className="text-2xl font-bold text-gray-900 mb-3" style={{ fontFamily: "'MedievalSharp', cursive" }}>Welcome to Combat!</h2>

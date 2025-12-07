@@ -133,6 +133,8 @@ export default function GameInterface() {
   const [currentRound, setCurrentRound] = useState<number | undefined>(undefined)
   const [currentCombatCount, setCurrentCombatCount] = useState<number | undefined>(undefined)
   const [currentMaxCombats, setCurrentMaxCombats] = useState<number | undefined>(undefined)
+  const [combatAvailable, setCombatAvailable] = useState(false)
+  const [combatSessionId, setCombatSessionId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -163,6 +165,11 @@ export default function GameInterface() {
       if (returningFromCombat && savedSessionId && savedMessages) {
         console.log("Returning from combat, attempting to restore session...")
         setSessionId(savedSessionId)
+
+        // Reset combat state when returning from battle
+        setCombatAvailable(false)
+        setCombatSessionId(null)
+        safeLocalStorage.removeItem("combat_session_id")
         try {
           const parsedMessages = JSON.parse(savedMessages)
           setMessages(parsedMessages)
@@ -500,14 +507,12 @@ export default function GameInterface() {
         throw new Error("Empty response from server")
       }
 
-      // Handle state transition to combat FIRST - redirect immediately
+      // Handle state transition to combat - store info but DON'T redirect automatically
       if (data && data.state_type === "combat" && data.combat_session_id) {
         safeLocalStorage.setItem("combat_session_id", data.combat_session_id)
-        setIsAiThinking(false)
-        // Redirect to dedicated combat UI immediately (don't add message to state)
-        // Use replace to prevent back button issues
-        window.location.replace(`/game/combat?session_id=${data.combat_session_id}`)
-        return
+        setCombatSessionId(data.combat_session_id)
+        setCombatAvailable(true)
+        // Don't redirect automatically - let user click "Enter Battle" button
       }
 
       if (!data.response) {
@@ -635,14 +640,12 @@ export default function GameInterface() {
         throw new Error("Empty response from server")
       }
 
-      // Handle state transition to combat FIRST - redirect immediately
+      // Handle state transition to combat - store info but DON'T redirect automatically
       if (data && data.state_type === "combat" && data.combat_session_id) {
         safeLocalStorage.setItem("combat_session_id", data.combat_session_id)
-        setIsAiThinking(false)
-        // Redirect to dedicated combat UI immediately (don't add message to state)
-        // Use replace to prevent back button issues
-        window.location.replace(`/game/combat?session_id=${data.combat_session_id}`)
-        return
+        setCombatSessionId(data.combat_session_id)
+        setCombatAvailable(true)
+        // Don't redirect automatically - let user click "Enter Battle" button
       }
 
       if (!data || !data.response) {
@@ -708,6 +711,15 @@ export default function GameInterface() {
         safeLocalStorage.setItem("game_messages", JSON.stringify(updated))
         return updated
       })
+    }
+  }
+
+  const handleEnterBattle = () => {
+    if (combatSessionId) {
+      // Clear combat available state
+      setCombatAvailable(false)
+      // Redirect to combat page
+      window.location.replace(`/game/combat?session_id=${combatSessionId}`)
     }
   }
 
@@ -900,28 +912,46 @@ export default function GameInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Input Form or Enter Battle Button */}
       <div className="border-t border-gray-700 bg-[#1A1A1A] p-6">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={messages.some(m => m.author === "ai" && m.isEnding) ? "Game Over" : "What do you do?"}
-            className="flex-1 bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 font-mono focus:border-purple-400 focus:ring-purple-400/20"
-            disabled={isAiThinking || messages.some(m => m.author === "ai" && m.isEnding)}
-          />
-          <Button
-            type="submit"
-            disabled={!inputValue.trim() || isAiThinking || messages.some(m => m.author === "ai" && m.isEnding)}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-mono px-6"
-          >
-            {isAiThinking ? "..." : ">"}
-          </Button>
-        </form>
+        {combatAvailable ? (
+          // Show Enter Battle button when combat is available
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={handleEnterBattle}
+              className="bg-red-600 hover:bg-red-700 text-white font-mono px-8 py-6 text-lg w-full max-w-md"
+            >
+              ⚔️ Enter Battle
+            </Button>
+            <p className="text-amber-400 text-sm font-mono animate-pulse">
+              A battle awaits! Click to enter combat.
+            </p>
+          </div>
+        ) : (
+          // Show normal input form when combat is not available
+          <>
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={messages.some(m => m.author === "ai" && m.isEnding) ? "Game Over" : "What do you do?"}
+                className="flex-1 bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 font-mono focus:border-purple-400 focus:ring-purple-400/20"
+                disabled={isAiThinking || messages.some(m => m.author === "ai" && m.isEnding)}
+              />
+              <Button
+                type="submit"
+                disabled={!inputValue.trim() || isAiThinking || messages.some(m => m.author === "ai" && m.isEnding)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-mono px-6"
+              >
+                {isAiThinking ? "..." : ">"}
+              </Button>
+            </form>
 
-        <p className="text-gray-500 text-xs mt-2 font-mono">
-          Press Enter to submit • Arcane Engine v1.0 • Powered by GPT-4 + RAG
-        </p>
+            <p className="text-gray-500 text-xs mt-2 font-mono">
+              Press Enter to submit • Arcane Engine v1.0 • Powered by GPT-4 + RAG
+            </p>
+          </>
+        )}
       </div>
 
       <style jsx>{`

@@ -268,7 +268,7 @@ class CampaignApp {
   }
 
   switchToCombatUI(combatSessionId) {
-    // Show combat interface from frontend-tmp/backend-tmp
+    // Show combat interface from frontend
     // Connect to combat agent at localhost:9000
     this.combatInterface = new CombatApp();
     this.combatInterface.sessionId = combatSessionId;

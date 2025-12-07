@@ -798,33 +798,31 @@ def handle_narration_action(tree: GameStateTree, current_node, data: UserInput, 
 
 
 def _get_choices_with_combat(current_node, story_tree, current_story_node_id: Optional[str], base_choices: Optional[List[str]] = None, game_tree: Optional[GameStateTree] = None) -> List[str]:
-    """Add combat option to choices list"""
+    """Add combat option to choices list - DISABLED: Combat is now triggered via UI button only"""
     choices = base_choices if base_choices else []
-    
+
     # Get combat availability from multiple sources
     combat_available = False
-    
+
     # Check round-based combat triggers
     if game_tree and game_tree.should_trigger_combat():
         combat_available = True
         logger.info(f"Combat available at round {game_tree.narration_round}")
-    
+
     # Check story tree combat availability
     if not combat_available and story_tree and current_story_node_id:
         story_node = story_tree.get_node(current_story_node_id)
         if story_node:
             combat_available = story_node.combat_available
-    
+
     # Check metadata for combat availability
     if not combat_available:
         combat_available = current_node.metadata.get("combat_available", False)
-    
-    # Add combat option (always show, but indicate availability)
-    if combat_available:
-        choices.append("⚔️ Enter Combat")
-    else:
-        choices.append("⚔️ Enter Combat (Not Available)")
-    
+
+    # REMOVED: Combat option is no longer added to choices list
+    # Players must click the "Enter Battle" button in the UI instead
+    # This prevents confusion and ensures combat is only entered when the player is ready
+
     return choices
 
 

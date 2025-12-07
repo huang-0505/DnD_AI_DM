@@ -34,7 +34,7 @@ dependencies = [
     # OpenAI
     "openai==1.57.2",
 
-    # Data processing (needed by backend-tmp)
+    # Data processing (needed by backend)
     "pandas==2.2.3",
     "numpy>=2.1.0",
 ]

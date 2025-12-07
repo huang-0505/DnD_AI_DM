@@ -214,38 +214,26 @@ class CombatEngine:
 
     def roll_initiative(self) -> deque:
         """Roll initiative for all combatants and return turn order.
-        Main player always goes first, then other players/teammates, then enemies.
+        Uses standard D&D 5e rules: d20 + DEX modifier, sorted highest to lowest.
         """
         chars = self.state.get_all()
-        
-        # Separate main player, other players/teammates, and enemies
-        main_player = [c for c in chars if c.role == "player"]
-        teammates = [c for c in chars if c.role == "teammate"]
-        enemies = [c for c in chars if c.role == "enemy"]
-        
-        # Main player always goes first
-        turn_order = []
-        if main_player:
-            turn_order.append(main_player[0])
-        
-        # Roll initiative for teammates
-        if teammates:
-            teammate_scores = [
-                (c, random.randint(1, 20) + c.attributes.get("DEX", 0), random.random()) for c in teammates
-            ]
-            # Sort by initiative score (descending), then by random tie-breaker (descending) for randomization
-            ordered_teammates = sorted(teammate_scores, key=lambda x: (x[1], x[2]), reverse=True)
-            turn_order.extend([c for c, _, _ in ordered_teammates])
-        
-        # Roll initiative for enemies
-        if enemies:
-            enemy_scores = [
-                (c, random.randint(1, 20) + c.attributes.get("DEX", 0), random.random()) for c in enemies
-            ]
-            # Sort by initiative score (descending), then by random tie-breaker (descending) for randomization
-            ordered_enemies = sorted(enemy_scores, key=lambda x: (x[1], x[2]), reverse=True)
-            turn_order.extend([c for c, _, _ in ordered_enemies])
-        
+
+        # Roll initiative for all combatants: d20 + DEX + random tiebreaker
+        initiative_scores = []
+        for c in chars:
+            # TESTING: Give first player/teammate a guaranteed high initiative (999)
+            if c.role in ["player", "teammate"] and c.id == 0:
+                initiative = 999  # Guaranteed to go first
+                print(f"[TESTING] {c.name} (first player) gets guaranteed initiative: {initiative}")
+            else:
+                initiative = random.randint(1, 20) + c.attributes.get("DEX", 0)
+            initiative_scores.append((c, initiative, random.random()))
+
+        # Sort by initiative score (descending), then by random tie-breaker (descending)
+        sorted_combatants = sorted(initiative_scores, key=lambda x: (x[1], x[2]), reverse=True)
+
+        # Return turn order as deque
+        turn_order = [c for c, _, _ in sorted_combatants]
         return deque(turn_order)
 
     def next_turn(self) -> Character:

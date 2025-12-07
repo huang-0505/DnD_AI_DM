@@ -45,7 +45,7 @@ case $TEST_TYPE in
             -v "$BASE_DIR/coverage.xml":/app/coverage.xml \
             $IMAGE_NAME \
             uv run --directory /app/tests pytest /app/tests/unit /app/tests/integration \
-                --cov=/app/src/backend-tmp/api \
+                --cov=/app/src/backend/api \
                 --cov=/app/src/rule_agent \
                 --cov=/app/src/orchestrator \
                 --cov-report=html \

@@ -30,7 +30,7 @@ uv run pytest /app/tests/integration -v -m integration
 
 # Generate coverage
 uv run pytest /app/tests/unit /app/tests/integration \
-    --cov=/app/src/backend-tmp/api \
+    --cov=/app/src/backend/api \
     --cov=/app/src/rule_agent \
     --cov=/app/src/orchestrator \
     --cov-report=html
@@ -107,7 +107,7 @@ tests/
 - **Fast**: 10-100x faster than pip
 - **Reliable**: Deterministic dependency resolution
 - **Compatible**: Works with standard `pyproject.toml`
-- **Consistent**: Same as backend-tmp and rule_agent services
+- **Consistent**: Same as backend and rule_agent services
 
 ## Troubleshooting
 
@@ -123,7 +123,7 @@ pip install uv
 Check PYTHONPATH is set correctly:
 ```bash
 echo $PYTHONPATH
-# Should include: /app/src/backend-tmp:/app/src/rule_agent:/app/src/orchestrator
+# Should include: /app/src/backend:/app/src/rule_agent:/app/src/orchestrator
 ```
 
 ### Dependency conflicts
