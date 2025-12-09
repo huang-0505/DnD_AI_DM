@@ -1,0 +1,310 @@
+# GitHub Actions CI/CD Pipeline
+# Runs on every push and pull request to main and develop branches
+# All tests run inside Docker container for consistency
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Job 1: Build Docker image (shared across all jobs)
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t dnd-test-runner:${{ github.sha }} -f tests/Dockerfile .
+
+      - name: Save Docker image
+        run: |
+          docker save dnd-test-runner:${{ github.sha }} -o /tmp/dnd-test-runner.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/dnd-test-runner.tar
+          retention-days: 1
+
+  # Job 2: Run linting and formatting checks
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/dnd-test-runner.tar
+
+      - name: Run Black formatter check
+        run: |
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            sh -c 'cd /app && uv run --directory /app/tests black --check --line-length 120 /app/src/'
+        continue-on-error: false
+
+      - name: Run Flake8 linter
+        run: |
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            sh -c 'cd /app && uv run --directory /app/tests flake8 --max-line-length=120 --extend-ignore=E203,W503,E501 /app/src/'
+        continue-on-error: true
+
+  # Job 3: Run unit tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/dnd-test-runner.tar
+
+      - name: Run unit tests
+        run: |
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/unit/ -v --tb=short -m unit
+
+      - name: Generate coverage report
+        run: |
+          docker run --rm -w /app \
+            -v ${{ github.workspace }}/coverage:/app/htmlcov \
+            -v ${{ github.workspace }}/coverage.xml:/app/coverage.xml \
+            dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/unit/ \
+              --cov=/app/src/backend/api \
+              --cov=/app/src/rule_agent \
+              --cov=/app/src/orchestrator \
+              --cov-report=term \
+              --cov-report=xml:/app/coverage.xml \
+              --cov-report=html:/app/htmlcov
+        continue-on-error: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-unit
+          path: |
+            coverage/
+            coverage.xml
+        if: always()
+
+  # Job 4: Run integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/dnd-test-runner.tar
+
+      - name: Run integration tests
+        run: |
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/integration/ -v --tb=short -m integration
+
+  # Job 5: Run system tests
+  system-tests:
+    name: System Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/dnd-test-runner.tar
+
+      - name: Start API server container
+        run: |
+          docker run -d --name api-server -p 9000:9000 \
+            -w /app \
+            -e DEV=1 \
+            -e GCP_PROJECT=test-project \
+            -e OPENAI_API_KEY=test-key \
+            -e RULE_AGENT_URL=http://localhost:9002 \
+            -e COMBAT_AGENT_URL=http://localhost:9000 \
+            -e NARRATOR_AGENT_URL=http://localhost:9001 \
+            -e PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator \
+            dnd-test-runner:${{ github.sha }} \
+            sh -c "cd /app/src/orchestrator && pip install --quiet -r requirements.txt && PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator:\$PYTHONPATH python -m uvicorn app:app --host 0.0.0.0 --port 9000" || echo "Server container started (may have import errors)"
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            # Check if container is still running
+            if ! docker ps | grep -q api-server; then
+              echo "Container stopped! Checking logs..."
+              docker logs api-server || true
+              exit 1
+            fi
+            if curl -f http://localhost:9000/health 2>/dev/null || curl -f http://localhost:9000/ 2>/dev/null; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30: Server not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Server failed to start within 60 seconds"
+          echo "Container logs:"
+          docker logs api-server || true
+          exit 1
+
+      - name: Run system tests
+        run: |
+          docker run --rm --network host -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/system/ -v --tb=short -m system
+
+      - name: Show server logs
+        if: always()
+        run: |
+          echo "=== Server Container Logs ==="
+          docker logs api-server || true
+          echo "=== Checking if container is running ==="
+          docker ps -a | grep api-server || true
+          echo "=== Container exit code ==="
+          docker inspect api-server --format='{{.State.ExitCode}}' || true
+
+      - name: Stop server container
+        if: always()
+        run: |
+          docker stop api-server || true
+          docker rm api-server || true
+
+  # Job 6: Test Summary
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, system-tests, lint-and-format]
+    if: always()
+    steps:
+      - name: Check test results
+        id: test-results
+        run: |
+          echo "Lint and Format: ${{ needs.lint-and-format.result }}"
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "System Tests: ${{ needs.system-tests.result }}"
+
+          if [ "${{ needs.lint-and-format.result }}" != "success" ] || \
+             [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.system-tests.result }}" != "success" ]; then
+            echo "❌ Some checks failed!"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ All checks passed!"
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if Slack webhook is configured
+        id: slack-check
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: always() && steps.slack-check.outputs.enabled == 'true'
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "${{ steps.test-results.outputs.status == 'success' && '✅ CI Pipeline Passed' || '❌ CI Pipeline Failed' }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ steps.test-results.outputs.status == 'success' && '✅ CI Pipeline Passed' || '❌ CI Pipeline Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n${{ github.repository }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n<${{ github.event.head_commit.url }}|${{ github.sha }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Author:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Test Results:*\n• Lint & Format: ${{ needs.lint-and-format.result == 'success' && '✅ Passed' || '❌ Failed' }}\n• Unit Tests: ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }}\n• Integration Tests: ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }}\n• System Tests: ${{ needs.system-tests.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.event.head_commit.url }}|View Commit> | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
