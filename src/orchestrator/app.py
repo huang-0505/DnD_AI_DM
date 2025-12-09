@@ -51,9 +51,8 @@ else:
     # Initialize GenAI client for narrator
     try:
         llm_client = genai.Client(vertexai=True, project=GCP_PROJECT, location=GCP_LOCATION)
-        logger.info("GenAI client initialized successfully")
     except Exception as e:
-        logger.warning(f"Failed to initialize GenAI client: {str(e)}. Continuing without narrator features.")
+        logger.error(f"Failed to initialize GenAI client: {str(e)}")
         llm_client = None
 
 # Configuration for narrator generation
@@ -1618,8 +1617,4 @@ def orchestrate_legacy(data: UserInput):
 if __name__ == "__main__":
     import uvicorn
 
-    logger.info("Starting D&D Game Orchestrator...")
-    logger.info(f"Rule Agent URL: {RULE_AGENT_URL}")
-    logger.info(f"Combat Agent URL: {COMBAT_AGENT_URL}")
-    logger.info(f"Narrator Agent URL: {NARRATOR_AGENT_URL}")
     uvicorn.run(app, host="0.0.0.0", port=8000)
