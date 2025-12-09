@@ -31,8 +31,8 @@ services:
       CHROMADB_PORT: 8000
     volumes:
       - ./secrets:/secrets:ro
-    expose:
-      - "9002"
+    ports:
+      - "9002:9002"
     restart: unless-stopped
     depends_on:
       - chromadb
@@ -54,8 +54,8 @@ services:
       DEV: "0"
     volumes:
       - ./secrets:/secrets:ro
-    expose:
-      - "9000"
+    ports:
+      - "9000:9000"
     restart: unless-stopped
     networks:
       - dnd-master-network
@@ -79,8 +79,8 @@ services:
       NARRATOR_AGENT_URL: http://narrator-agent:9001
     volumes:
       - ./secrets:/secrets:ro
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     restart: unless-stopped
     depends_on:
       - chromadb

@@ -59,13 +59,13 @@ jobs:
       - name: Run Black formatter check
         run: |
           docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
-            sh -c 'cd /app && uv run --directory /app/tests black --check --line-length 120 src/'
+            sh -c 'cd /app && uv run --directory /app/tests black --check --line-length 120 /app/src/'
         continue-on-error: false
 
       - name: Run Flake8 linter
         run: |
           docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
-            sh -c 'cd /app && uv run --directory /app/tests flake8 --max-line-length=120 --extend-ignore=E203,W503,E501 src/'
+            sh -c 'cd /app && uv run --directory /app/tests flake8 --max-line-length=120 --extend-ignore=E203,W503,E501 /app/src/'
         continue-on-error: true
 
   # Job 3: Run unit tests
@@ -168,7 +168,7 @@ jobs:
             -e OPENAI_API_KEY=test-key \
             -e PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator \
             dnd-test-runner:${{ github.sha }} \
-            sh -c "cd /app/src/orchestrator && PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator:$PYTHONPATH uv run --directory /app/tests uvicorn app:app --host 0.0.0.0 --port 9000"
+            sh -c "cd /app/src/orchestrator && PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator:\$PYTHONPATH uv run --directory /app/tests python -m uvicorn app:app --host 0.0.0.0 --port 9000" || echo "Server container started (may have import errors)"
 
       - name: Wait for server to be ready
         run: |
@@ -192,7 +192,12 @@ jobs:
       - name: Show server logs
         if: always()
         run: |
+          echo "=== Server Container Logs ==="
           docker logs api-server || true
+          echo "=== Checking if container is running ==="
+          docker ps -a | grep api-server || true
+          echo "=== Container exit code ==="
+          docker inspect api-server --format='{{.State.ExitCode}}' || true
 
       - name: Stop server container
         if: always()

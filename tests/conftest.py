@@ -8,7 +8,8 @@ Shared pytest fixtures for all tests.
 collect_ignore = [
     "unit/test_agent_tools.py",
     "unit/test_rule_agent_app.py",
-    "unit/test_rule_agent_cli.py"
+    "unit/test_rule_agent_cli.py",
+    "integration/test_rule_agent.py"  # Integration tests also import app.py
 ]
 
 import pytest

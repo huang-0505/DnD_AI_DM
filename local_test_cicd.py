@@ -133,44 +133,52 @@ def run_tests(test_type="all"):
     print(f"🧪 Running {test_type} tests...")
     
     if test_type == "system":
-        # System tests require a running server
-        print("⚠️  System tests require a running server.")
-        print("💡 Starting server container...")
+        # System tests require services, but docker-compose build can be problematic
+        # Check if services are already running first
+        print("⚠️  System tests require Docker services to be running.")
+        print("💡 Checking for running services...")
         
-        # Start server
-        server_cmd = [
-            "docker", "run", "-d",
-            "--name", "api-server",
-            "-p", "9000:9000",
-            "-w", "/app",
-            "-e", "DEV=1",
-            "-e", "GCP_PROJECT=test-project",
-            "-e", "OPENAI_API_KEY=test-key",
-            "-e", "PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator",
-            f"{IMAGE_NAME}:{IMAGE_TAG}",
-            "sh", "-c", "cd /app/src/orchestrator && PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator:$PYTHONPATH uv run --directory /app/tests uvicorn app:app --host 0.0.0.0 --port 9000"
-        ]
+        check_cmd = ["docker", "ps", "--format", "{{.Names}}"]
+        result = subprocess.run(check_cmd, capture_output=True, text=True, check=False)
+        running_services = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        
+        services_needed = ["dnd-api-gateway", "dnd-combat-agent", "dnd-rule-agent", "dnd-chromadb"]
+        services_found = [s for s in services_needed if s in running_services]
+        
+        if len(services_found) < len(services_needed):
+            print("")
+            print("❌ Required services are not running!")
+            print("")
+            print("📋 To run system tests, start the required services:")
+            print("")
+            print("   # Start only the services needed (skip frontend to avoid build errors):")
+            print("   docker-compose up -d chromadb rule-agent combat-agent api-gateway")
+            print("")
+            print("   # Wait for services to be ready (15-30 seconds)")
+            print("   sleep 20")
+            print("")
+            print("   # Then run tests again:")
+            print("   python3 local_test_cicd.py test system")
+            print("")
+            print("💡 Note: System tests will skip if services aren't available.")
+            print("   Most tests check for service availability and skip gracefully.")
+            return False
+        
+        print(f"✅ Found required services: {', '.join(services_found)}")
+        print("🧪 Running system tests...")
         
         try:
-            run_command(server_cmd)
-            print("⏳ Waiting for server to start...")
-            import time
-            time.sleep(10)
-            
-            # Run tests with host network
+            # Run tests from host (not in container) since services are on localhost
             test_cmd = [
-                "docker", "run", "--rm", "--network", "host", "-w", "/app",
-                f"{IMAGE_NAME}:{IMAGE_TAG}",
-                "uv", "run", "--directory", "/app/tests",
-                "pytest", test_path, "-v", "--tb=short", marker
+                "python3", "-m", "pytest",
+                "tests/system/",
+                "-v", "--tb=short", "-m", "system"
             ]
-            run_command(test_cmd)
-            
-        finally:
-            # Cleanup
-            print("🧹 Cleaning up server container...")
-            subprocess.run(["docker", "stop", "api-server"], capture_output=True)
-            subprocess.run(["docker", "rm", "api-server"], capture_output=True)
+            run_command(test_cmd, check=True)
+        except subprocess.CalledProcessError:
+            print("❌ System tests failed!")
+            print("💡 Check service logs: docker-compose logs")
+            return False
     else:
         # Unit and integration tests
         cmd = [
