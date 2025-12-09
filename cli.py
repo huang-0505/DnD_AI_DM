@@ -72,10 +72,9 @@ def run_lint():
     # Check Black formatting
     print("\n📝 Checking code formatting with Black...")
     cmd = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "-w", "/app",
         f"{IMAGE_NAME}:{IMAGE_TAG}",
-        "uv", "run", "--directory", "/app/tests",
-        "black", "--check", "--line-length", "120", "src/"
+        "sh", "-c", "cd /app && uv run --directory /app/tests black --check --line-length 120 src/"
     ]
     try:
         run_command(cmd)
@@ -88,10 +87,9 @@ def run_lint():
     # Run Flake8 linter
     print("\n🔎 Running Flake8 linter...")
     cmd = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "-w", "/app",
         f"{IMAGE_NAME}:{IMAGE_TAG}",
-        "uv", "run", "--directory", "/app/tests",
-        "flake8", "--max-line-length=120", "--extend-ignore=E203,W503,E501", "src/"
+        "sh", "-c", "cd /app && uv run --directory /app/tests flake8 --max-line-length=120 --extend-ignore=E203,W503,E501 src/"
     ]
     try:
         run_command(cmd)
@@ -119,10 +117,10 @@ def format_code():
 def run_tests(test_type="all"):
     """Run tests based on type."""
     test_types = {
-        "unit": ("tests/unit/", "-m unit"),
-        "integration": ("tests/integration/", "-m integration"),
-        "system": ("tests/system/", "-m system"),
-        "all": ("tests/unit/ tests/integration/", "")
+        "unit": ("/app/tests/unit/", "-m unit"),
+        "integration": ("/app/tests/integration/", "-m integration"),
+        "system": ("/app/tests/system/", "-m system"),
+        "all": ("/app/tests/unit/ /app/tests/integration/", "")
     }
     
     if test_type not in test_types:
@@ -144,12 +142,13 @@ def run_tests(test_type="all"):
             "docker", "run", "-d",
             "--name", "api-server",
             "-p", "9000:9000",
+            "-w", "/app",
             "-e", "DEV=1",
             "-e", "GCP_PROJECT=test-project",
             "-e", "OPENAI_API_KEY=test-key",
+            "-e", "PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator",
             f"{IMAGE_NAME}:{IMAGE_TAG}",
-            "uv", "run", "--directory", "/app/tests",
-            "uvicorn", "src.orchestrator.app:app", "--host", "0.0.0.0", "--port", "9000"
+            "sh", "-c", "cd /app/src/orchestrator && PYTHONPATH=/app/src/backend:/app/src/rule_agent:/app/src/orchestrator:$PYTHONPATH uv run --directory /app/tests uvicorn app:app --host 0.0.0.0 --port 9000"
         ]
         
         try:
@@ -160,7 +159,7 @@ def run_tests(test_type="all"):
             
             # Run tests with host network
             test_cmd = [
-                "docker", "run", "--rm", "--network", "host",
+                "docker", "run", "--rm", "--network", "host", "-w", "/app",
                 f"{IMAGE_NAME}:{IMAGE_TAG}",
                 "uv", "run", "--directory", "/app/tests",
                 "pytest", test_path, "-v", "--tb=short", marker
@@ -175,7 +174,7 @@ def run_tests(test_type="all"):
     else:
         # Unit and integration tests
         cmd = [
-            "docker", "run", "--rm",
+            "docker", "run", "--rm", "-w", "/app",
             f"{IMAGE_NAME}:{IMAGE_TAG}",
             "uv", "run", "--directory", "/app/tests",
             "pytest", test_path, "-v", "--tb=short", marker
@@ -195,18 +194,18 @@ def generate_coverage():
     coverage_dir.mkdir(exist_ok=True)
     
     cmd = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "-w", "/app",
         "-v", f"{coverage_dir}:/app/htmlcov",
         "-v", f"{PROJECT_ROOT}/coverage.xml:/app/coverage.xml",
         f"{IMAGE_NAME}:{IMAGE_TAG}",
         "uv", "run", "--directory", "/app/tests",
-        "pytest", "tests/unit/",
-        "--cov=src/backend/api",
-        "--cov=src/rule_agent",
-        "--cov=src/orchestrator",
+        "pytest", "/app/tests/unit/",
+        "--cov=/app/src/backend/api",
+        "--cov=/app/src/rule_agent",
+        "--cov=/app/src/orchestrator",
         "--cov-report=term",
-        "--cov-report=xml:coverage.xml",
-        "--cov-report=html:htmlcov"
+        "--cov-report=xml:/app/coverage.xml",
+        "--cov-report=html:/app/htmlcov"
     ]
     
     try:
@@ -254,20 +253,41 @@ def main():
         epilog=__doc__
     )
     
-    parser.add_argument(
-        "command",
-        choices=["build", "lint", "format", "test", "coverage", "ci", "help"],
-        help="Command to execute"
-    )
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
     
-    parser.add_argument(
-        "--test-type",
+    # Build command
+    subparsers.add_parser("build", help="Build the Docker test image")
+    
+    # Lint command
+    subparsers.add_parser("lint", help="Run linting and formatting checks")
+    
+    # Format command
+    subparsers.add_parser("format", help="Auto-format code with Black")
+    
+    # Test command with test type as positional argument
+    test_parser = subparsers.add_parser("test", help="Run tests")
+    test_parser.add_argument(
+        "test_type",
+        nargs="?",
         choices=["unit", "integration", "system", "all"],
         default="all",
-        help="Type of tests to run (for 'test' command)"
+        help="Type of tests to run (default: all)"
     )
     
+    # Coverage command
+    subparsers.add_parser("coverage", help="Generate coverage reports")
+    
+    # CI command
+    subparsers.add_parser("ci", help="Run full CI pipeline locally")
+    
+    # Help command
+    subparsers.add_parser("help", help="Show help message")
+    
     args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
     
     # Check if Docker is available
     try:
@@ -288,7 +308,8 @@ def main():
     elif args.command == "format":
         format_code()
     elif args.command == "test":
-        success = run_tests(args.test_type)
+        test_type = getattr(args, "test_type", "all")
+        success = run_tests(test_type)
         sys.exit(0 if success else 1)
     elif args.command == "coverage":
         generate_coverage()
