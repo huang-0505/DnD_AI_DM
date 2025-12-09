@@ -58,13 +58,13 @@ jobs:
 
       - name: Run Black formatter check
         run: |
-          docker run --rm dnd-test-runner:${{ github.sha }} \
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
             uv run --directory /app/tests black --check --line-length 120 src/
         continue-on-error: false
 
       - name: Run Flake8 linter
         run: |
-          docker run --rm dnd-test-runner:${{ github.sha }} \
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
             uv run --directory /app/tests flake8 --max-line-length=120 --extend-ignore=E203,W503,E501 src/
         continue-on-error: true
 
@@ -89,22 +89,22 @@ jobs:
 
       - name: Run unit tests
         run: |
-          docker run --rm dnd-test-runner:${{ github.sha }} \
-            uv run --directory /app/tests pytest tests/unit/ -v --tb=short -m unit
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/unit/ -v --tb=short -m unit
 
       - name: Generate coverage report
         run: |
-          docker run --rm \
+          docker run --rm -w /app \
             -v ${{ github.workspace }}/coverage:/app/htmlcov \
             -v ${{ github.workspace }}/coverage.xml:/app/coverage.xml \
             dnd-test-runner:${{ github.sha }} \
-            uv run --directory /app/tests pytest tests/unit/ \
-              --cov=src/backend/api \
-              --cov=src/rule_agent \
-              --cov=src/orchestrator \
+            uv run --directory /app/tests pytest /app/tests/unit/ \
+              --cov=/app/src/backend/api \
+              --cov=/app/src/rule_agent \
+              --cov=/app/src/orchestrator \
               --cov-report=term \
-              --cov-report=xml:coverage.xml \
-              --cov-report=html:htmlcov
+              --cov-report=xml:/app/coverage.xml \
+              --cov-report=html:/app/htmlcov
         continue-on-error: true
 
       - name: Upload coverage report
@@ -137,8 +137,8 @@ jobs:
 
       - name: Run integration tests
         run: |
-          docker run --rm dnd-test-runner:${{ github.sha }} \
-            uv run --directory /app/tests pytest tests/integration/ -v --tb=short -m integration
+          docker run --rm -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/integration/ -v --tb=short -m integration
 
   # Job 5: Run system tests
   system-tests:
@@ -162,11 +162,12 @@ jobs:
       - name: Start API server container
         run: |
           docker run -d --name api-server -p 9000:9000 \
+            -w /app \
             -e DEV=1 \
             -e GCP_PROJECT=test-project \
             -e OPENAI_API_KEY=test-key \
             dnd-test-runner:${{ github.sha }} \
-            uv run --directory /app/tests uvicorn src.orchestrator.app:app --host 0.0.0.0 --port 9000
+            sh -c "cd /app/src/orchestrator && uv run --directory /app/tests uvicorn app:app --host 0.0.0.0 --port 9000"
 
       - name: Wait for server to be ready
         run: |
@@ -184,8 +185,8 @@ jobs:
 
       - name: Run system tests
         run: |
-          docker run --rm --network host dnd-test-runner:${{ github.sha }} \
-            uv run --directory /app/tests pytest tests/system/ -v --tb=short -m system
+          docker run --rm --network host -w /app dnd-test-runner:${{ github.sha }} \
+            uv run --directory /app/tests pytest /app/tests/system/ -v --tb=short -m system
 
       - name: Show server logs
         if: always()
