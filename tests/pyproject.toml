@@ -37,6 +37,10 @@ dependencies = [
     # Data processing (needed by backend)
     "pandas==2.2.3",
     "numpy>=2.1.0",
+    
+    # Code quality tools (for CI/CD)
+    "black>=24.0.0",
+    "flake8>=7.0.0",
 ]
 
 [build-system]
