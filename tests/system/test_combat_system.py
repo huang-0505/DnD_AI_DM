@@ -48,7 +48,9 @@ def is_combat_agent_running(url: str) -> bool:
         return False
 
 
-@pytest.mark.system
+# Note: These tests require combat-agent running (not orchestrator)
+# They are NOT run in CI - only for local testing with full docker-compose setup
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.skipif(
     not is_service_running(COMBAT_API_URL),
     reason="Service not running at localhost:9000. Run 'docker-compose up' first."
@@ -201,7 +203,9 @@ class TestCombatSystemDirect:
         )
 
 
-@pytest.mark.system
+# Note: These tests require full docker-compose setup
+# They are NOT run in CI - only for local testing
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.skipif(
     not is_service_running(NGINX_URL, "/api"),
     reason="Nginx not running at localhost:8080. Run 'docker-compose up' first."
@@ -219,7 +223,8 @@ class TestSystemViaGateway:
         assert response.status_code in [200, 404]  # Depends on nginx config
 
 
-@pytest.mark.system
+# Note: These tests are informational only - not required for CI
+# @pytest.mark.system  # Removed - these don't run in CI
 class TestServiceAvailability:
     """Test availability of all system components."""
 

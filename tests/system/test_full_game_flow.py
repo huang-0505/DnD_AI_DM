@@ -46,7 +46,9 @@ def wait_for_service(url: str, timeout: int = 30, service_name: str = "Service")
     return False
 
 
-@pytest.mark.system
+# Note: These tests require full docker-compose setup with all services
+# They are NOT run in CI - only for local testing
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.skipif(
     not is_service_running(ORCHESTRATOR_URL),
     reason="Orchestrator not running at localhost:8000"
@@ -218,7 +220,9 @@ def is_combat_agent_running(url: str) -> bool:
         return False
 
 
-@pytest.mark.system
+# Note: These tests require combat-agent running (not orchestrator)
+# They are NOT run in CI - only for local testing
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.skipif(
     not is_service_running(COMBAT_AGENT_URL),
     reason="Service not running at localhost:9000"
@@ -308,7 +312,9 @@ class TestCombatSystemFlow:
         assert status_response.status_code in [200, 404]
 
 
-@pytest.mark.system
+# Note: These tests require rule-agent and ChromaDB running
+# They are NOT run in CI - only for local testing
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.skipif(
     not is_service_running(RULE_AGENT_URL),
     reason="Rule Agent not running"
@@ -397,7 +403,9 @@ class TestRuleAgentSystemFlow:
                 assert "is_valid" in data
 
 
-@pytest.mark.system
+# Note: These tests require full docker-compose setup
+# They are NOT run in CI - only for local testing
+# @pytest.mark.system  # Removed - these don't run in CI
 @pytest.mark.slow
 class TestServiceResilience:
     """Test system resilience and error handling."""
