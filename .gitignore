@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Exception: Don't ignore Next.js frontend lib directory
+!src/frontend/lib/
 parts/
 sdist/
 var/
