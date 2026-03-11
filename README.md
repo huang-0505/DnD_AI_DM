@@ -12,15 +12,20 @@
 - Ruoheng Zhang
 - Yizhen Wang
 
-### Project Highlights
+## Project Highlights
+
+| Landing Page | Narration Mode | Combat Arena |
+|:---:|:---:|:---:|
+| ![Landing](figures/screenshot-landing.jpg) | ![Narration](figures/screenshot-narration.jpg) | ![Combat](figures/screenshot-combat.jpg) |
+
 - 🎮 **Interactive Web Interface** - Modern React-based UI for seamless gameplay
 - ⚔️ **Turn-Based Combat System** - Full D&D 5e combat mechanics with AI-controlled enemies
 - 📚 **RAG-Powered Rule Validation** - Real-time D&D rule checking using ChromaDB and semantic search
 - 🧠 **Finetuned Narrator LLM** - Custom-trained Gemini model for immersive storytelling
 - 🎯 **Multi-Agent Orchestration** - Intelligent routing between narration, combat, and rule validation
 - 🐳 **Containerized Microservices** - Full Docker-based deployment with Nginx reverse proxy
-- 🛠️ **End-to-End MLOps Pipeline** – Containerized ETL, dataset creation, and Vertex AI fine-tuning workflow enabling fully reproducible model updates
-- 📦 **DVC-Backed Data Versioning** – Deterministic dataset snapshots stored in GCS for auditability, reproducibility, and consistent model lineage
+- 🛠️ **End-to-End MLOps Pipeline** – Containerized ETL, dataset creation, and Vertex AI fine-tuning
+- 📦 **DVC-Backed Data Versioning** – Deterministic dataset snapshots stored in GCS
 
 ---
 
