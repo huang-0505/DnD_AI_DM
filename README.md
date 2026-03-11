@@ -14,9 +14,14 @@
 
 ## Project Highlights
 
-| Landing Page | Narration Mode | Combat Arena |
-|:---:|:---:|:---:|
-| ![Landing](figures/screenshot-landing.jpg) | ![Narration](figures/screenshot-narration.jpg) | ![Combat](figures/screenshot-combat.jpg) |
+### 🏠 Landing Page
+![Landing Page](figures/screenshot-landing.jpg)
+
+### 📖 Narration Mode
+![Narration Mode](figures/screenshot-narration.jpg)
+
+### ⚔️ Combat Arena
+![Combat Arena](figures/screenshot-combat.jpg)
 
 - 🎮 **Interactive Web Interface** - Modern React-based UI for seamless gameplay
 - ⚔️ **Turn-Based Combat System** - Full D&D 5e combat mechanics with AI-controlled enemies
@@ -26,9 +31,6 @@
 - 🐳 **Containerized Microservices** - Full Docker-based deployment with Nginx reverse proxy
 - 🛠️ **End-to-End MLOps Pipeline** – Containerized ETL, dataset creation, and Vertex AI fine-tuning
 - 📦 **DVC-Backed Data Versioning** – Deterministic dataset snapshots stored in GCS
-
----
-
 ## Architecture
 
 ![Project Workflow](figures/workflow.png)
